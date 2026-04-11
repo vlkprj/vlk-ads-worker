@@ -114,7 +114,7 @@ export default {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: msg.chat.id,
-              text: "Привіт! Тисни кнопку нижче, щоб відкрити прайс і замовити рекламу:",
+              text: "Вітаю! Тисни кнопку «Відкрити» зліва або кнопку нижче",
               reply_markup: replyMarkup
             })
           });
