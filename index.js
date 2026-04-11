@@ -14,37 +14,28 @@ export default {
       const url = new URL(request.url);
       const token = env.BOT_TOKEN;
       const adminGroup = env.GROUP_ID;
-      
-      
       const adminThreadId = 3424; 
 
-      
       if (url.pathname === '/order') {
         const body = await request.json();
         const u = body.user || {};
         
-        const username = u.username ? `@${u.username}` : 'Без юзернейму';
-        const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Анонім';
+        const firstName = u.first_name || 'Анонім';
+        const usernameStr = u.username ? `(@${u.username})` : '';
         const userId = u.id || 'Невідомо';
-        const lang = u.language_code || 'ХЗ';
-        const premium = u.is_premium ? '⭐️ Premium' : 'Звичайний';
+        const lang = u.language_code || 'uk';
 
-        
-        const userLink = userId !== 'Невідомо' ? `<a href="tg://user?id=${userId}">${fullName}</a>` : fullName;
-
-        const messageText = `📋 Нове замовлення реклами!\n\n` +
-                            `👤 Клієнт: ${userLink} (${username})\n` +
-                            `🆔 ID: <code>${userId}</code>\n` +
-                            `🌍 Мова: ${lang} | 💎 Статус: ${premium}\n` +
-                            `➖➖➖➖➖➖➖➖\n` +
-                            `${body.text}`;
+        const dossierText = `📋 <b>Нове замовлення реклами!</b>\n\n🧑 ${firstName} ${usernameStr}\n🆔 <code>${userId}</code>\n🌐 мова: ${lang}\n➖➖➖➖➖➖➖➖\n${body.text}`;
 
         const payload = {
             chat_id: adminGroup,
-            text: messageText,
-            parse_mode: 'HTML'
+            text: dossierText,
+            parse_mode: 'HTML',
+            message_thread_id: adminThreadId,
+            reply_markup: {
+                inline_keyboard: [[{ text: "👤 Профіль", url: `tg://user?id=${userId}` }]]
+            }
         };
-        if (adminThreadId) payload.message_thread_id = adminThreadId;
 
         await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
@@ -61,32 +52,26 @@ export default {
         const msg = update.message;
         const chatId = msg.chat.id.toString();
 
-        
         if (msg.web_app_data) {
           const orderText = msg.web_app_data.data;
           const u = msg.from || {};
           
-          const username = u.username ? `@${u.username}` : 'Без юзернейму';
-          const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Анонім';
+          const firstName = u.first_name || 'Анонім';
+          const usernameStr = u.username ? `(@${u.username})` : '';
           const userId = u.id || 'Невідомо';
-          const lang = u.language_code || 'ХЗ';
-          const premium = u.is_premium ? '⭐️ Premium' : 'Звичайний';
+          const lang = u.language_code || 'uk';
 
-          const userLink = userId !== 'Невідомо' ? `<a href="tg://user?id=${userId}">${fullName}</a>` : fullName;
-
-          const messageText = `📋 Нове замовлення реклами!\n\n` +
-                              `👤 Клієнт: ${userLink} (${username})\n` +
-                              `🆔 ID: <code>${userId}</code>\n` +
-                              `🌍 Мова: ${lang} | 💎 Статус: ${premium}\n` +
-                              `➖➖➖➖➖➖➖➖\n` +
-                              `${orderText}`;
+          const dossierText = `📋 <b>Нове замовлення реклами!</b>\n\n👤 ${firstName} ${usernameStr}\n🆔 <code>${userId}</code>\n🌐 мова: ${lang}\n➖➖➖➖➖➖➖➖\n${orderText}`;
 
           const payload = {
               chat_id: adminGroup,
-              text: messageText,
-              parse_mode: 'HTML'
+              text: dossierText,
+              parse_mode: 'HTML',
+              message_thread_id: adminThreadId,
+              reply_markup: {
+                  inline_keyboard: [[{ text: "👤 Профіль", url: `tg://user?id=${userId}` }]]
+              }
           };
-          if (adminThreadId) payload.message_thread_id = adminThreadId;
 
           await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
@@ -95,15 +80,12 @@ export default {
           });
         }
 
-        
         if (chatId === adminGroup.toString() && msg.reply_to_message) {
             const originalText = msg.reply_to_message.text || '';
-            
-            const match = originalText.match(/ID:\s*(\d+)/);
+            const match = originalText.match(/🆔\s*(\d+)/); 
             
             if (match && match[1]) {
                 const targetUserId = match[1];
-                
                 
                 await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
                   method: 'POST',
@@ -116,13 +98,12 @@ export default {
             }
         }
 
-        
         if (msg.text === '/start') {
           const replyMarkup = {
             keyboard: [
               [{
                 text: "❇️ Замовити рекламу",
-                web_app: { url: "https://tvoy-github-pages.com" } // Твоя лінка
+                web_app: { url: "https://tvoy-github-pages.com" } // І ось тут теж лінк не забудь!
               }]
             ],
             resize_keyboard: true
