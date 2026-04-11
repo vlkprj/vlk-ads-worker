@@ -56,7 +56,7 @@ export default {
       const chatId = msg.chat.id.toString();
 
       
-            if (chatId === adminGroup && msg.reply_to_message) {
+            if (chatId === adminGroup && msg.reply_to_message && msg.message_thread_id === adminThreadId) {
         const originalText = msg.reply_to_message.text || msg.reply_to_message.caption || '';
         const match = originalText.match(/🆔\s*(\d+)/); 
         
