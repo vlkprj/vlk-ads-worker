@@ -72,6 +72,33 @@ export default {
           })
         });
       }
+      if (update.message && update.message.web_app_data) {
+        const orderText = update.message.web_app_data.data;
+        const u = update.message.from || {};
+        
+        const username = u.username ? `@${u.username}` : 'Без юзернейму';
+        const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Анонім';
+        const userId = u.id || 'Невідомо';
+        const lang = u.language_code || 'ХЗ';
+        const premium = u.is_premium ? '⭐️ Premium' : 'Звичайний';
+
+        const messageText = `📋 Нове замовлення реклами!\n\n` +
+                            `👤 Клієнт: ${fullName} (${username})\n` +
+                            `🆔 ID: <code>${userId}</code>\n` +
+                            `🌍 Мова: ${lang} | 💎 Статус: ${premium}\n` +
+                            `➖➖➖➖➖➖➖➖\n` +
+                            `${orderText}`;
+
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: adminGroup,
+            text: messageText,
+            parse_mode: 'HTML'
+          })
+        });
+      }
 
       return new Response('OK');
     }
