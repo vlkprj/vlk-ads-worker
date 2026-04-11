@@ -56,7 +56,7 @@ export default {
       const chatId = msg.chat.id.toString();
 
       
-      if (chatId === adminGroup && msg.reply_to_message) {
+            if (chatId === adminGroup && msg.reply_to_message) {
         const originalText = msg.reply_to_message.text || msg.reply_to_message.caption || '';
         const match = originalText.match(/🆔\s*(\d+)/); 
         
@@ -64,7 +64,6 @@ export default {
           const targetUserId = match[1];
           
           if (msg.text) {
-            
             await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -75,7 +74,7 @@ export default {
               })
             });
           } else {
-            
+            const newCaption = msg.caption ? `📩 <b>Відповідь від адмінів:</b>\n\n${msg.caption}` : `📩 Відповідь від адмінів`;
             await fetch(`https://api.telegram.org/bot${token}/copyMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -83,12 +82,14 @@ export default {
                 chat_id: targetUserId,
                 from_chat_id: adminGroup,
                 message_id: msg.message_id,
-                caption: `📩 Відповідь від адмінів`
+                caption: newCaption,
+                parse_mode: 'HTML'
               })
             });
           }
         }
       }
+
 
     
       if (msg.web_app_data) {
