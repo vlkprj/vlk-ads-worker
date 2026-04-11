@@ -42,6 +42,17 @@ export default {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        
+        if (userId !== 'Невідомо') {
+            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: userId,
+                text: "✅ Ваше замовлення успішно передано адміністраторам! Очікуйте на відповідь."
+              })
+            }).catch(() => {});
+        }
 
         return new Response('OK', { headers: { 'Access-Control-Allow-Origin': '*' } });
       }
