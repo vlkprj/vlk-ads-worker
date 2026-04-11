@@ -25,7 +25,7 @@ export default {
         const userId = u.id || 'Невідомо';
         const lang = u.language_code || 'uk';
 
-        const dossierText = `📋 <b>Нове замовлення реклами!</b>\n\n🧑 ${firstName} ${usernameStr}\n🆔 <code>${userId}</code>\n🌐 мова: ${lang}\n➖➖➖➖➖➖➖➖\n${body.text}`;
+        const dossierText = `📋 <b>Нове замовлення реклами</b>\n\n👤 ${firstName} ${usernameStr}\n🆔 <code>${userId}</code>\n🌐 мова: ${lang}\n➖➖➖➖➖➖➖➖\n${body.text}`;
 
         const payload = {
             chat_id: adminGroup,
