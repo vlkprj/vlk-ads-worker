@@ -103,7 +103,17 @@ export default {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     chat_id: targetUserId,
-                    text: `📩 Відповідь від адмінів:\n\n${msg.text}`
+                    text: `📩 Відповідь від адмінів:`
+                  })
+                });
+
+                await fetch(`https://api.telegram.org/bot${token}/copyMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: targetUserId,
+                    from_chat_id: adminGroup,
+                    message_id: msg.message_id
                   })
                 });
             }
@@ -114,7 +124,7 @@ export default {
             keyboard: [
               [{
                 text: "❇️ Замовити рекламу",
-                web_app: { url: "https://tvoy-github-pages.com" } // І ось тут теж лінк не забудь!
+                web_app: { url: "https://vlkprj.github.io/ads" } 
               }]
             ],
             resize_keyboard: true
@@ -127,6 +137,34 @@ export default {
               chat_id: msg.chat.id,
               text: "Вітаю! Тисни кнопку «Відкрити» зліва або кнопку нижче",
               reply_markup: replyMarkup
+            })
+          });
+        }
+
+        if (chatId > 0 && msg.text !== '/start' && !msg.web_app_data) {
+          const u = msg.from || {};
+          const firstName = u.first_name || 'Анонім';
+          const userId = u.id;
+
+          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: adminGroup,
+              message_thread_id: adminThreadId,
+              text: `💬 <b>Повідомлення від клієнта</b>\n👤 <a href="tg://user?id=${userId}">${firstName}</a>\n🆔 <code>${userId}</code>`,
+              parse_mode: 'HTML'
+            })
+          });
+
+          await fetch(`https://api.telegram.org/bot${token}/copyMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: adminGroup,
+              from_chat_id: chatId,
+              message_id: msg.message_id,
+              message_thread_id: adminThreadId
             })
           });
         }
