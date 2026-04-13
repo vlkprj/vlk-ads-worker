@@ -110,7 +110,7 @@ export default {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: chatId,
-              text: "Вітаю! Тисни кнопку «Відкрити» зліва біля поля вводу, щоб переглянути прайс."
+              text: "Вітаю! Тисни кнопку «Глянути» зліва біля поля вводу."
             })
           });
         } else {
