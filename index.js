@@ -24,7 +24,7 @@ export default {
 
         const dossierText = `📋 <b>Нове замовлення реклами</b>\n\n👤 ${u.first_name || 'Анонім'} ${u.username ? `(@${u.username})` : ''}\n🆔 <code>${userId}</code>\n🌐 мова: ${u.language_code || 'uk'}\n➖➖➖➖➖➖➖➖\n${body.text}`;
 
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -35,6 +35,12 @@ export default {
             reply_markup: { inline_keyboard: [[{ text: "👤 Профіль", url: `tg://user?id=${userId}` }]] }
           })
         });
+        
+        // ДЕБАГ: Ловимо помилку від Телеграму для міні-апки
+        const resData = await res.json();
+        if (!resData.ok) {
+            console.log("❌ ПОМИЛКА ТЕЛЕГРАМУ (MINI-APP):", JSON.stringify(resData));
+        }
         
         if (userId !== 'Невідомо') {
           await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -88,7 +94,8 @@ export default {
       if (msg.web_app_data) {
         const u = msg.from || {};
         const dossierText = `📋 <b>Нове замовлення реклами!</b>\n\n👤 ${u.first_name || 'Анонім'} ${u.username ? `(@${u.username})` : ''}\n🆔 <code>${u.id}</code>\n🌐 мова: ${u.language_code || 'uk'}\n➖➖➖➖➖➖➖➖\n${msg.web_app_data.data}`;
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        
+        const resWeb = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -99,6 +106,13 @@ export default {
             reply_markup: { inline_keyboard: [[{ text: "👤 Профіль", url: `tg://user?id=${u.id}` }]] }
           })
         });
+
+        // ДЕБАГ: Ловимо помилку від Телеграму для кнопки
+        const resWebData = await resWeb.json();
+        if (!resWebData.ok) {
+            console.log("❌ ПОМИЛКА ТЕЛЕГРАМУ (WEB_APP_DATA):", JSON.stringify(resWebData));
+        }
+
         return new Response('OK');
       }
 
@@ -116,7 +130,7 @@ export default {
         } else {
           // Звичайне повідомлення - робимо досьє з кнопкою профілю
           const u = msg.from || {};
-          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          const resMsg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -127,6 +141,12 @@ export default {
               reply_markup: { inline_keyboard: [[{ text: "👤 Профіль", url: `tg://user?id=${u.id}` }]] }
             })
           });
+
+          // ДЕБАГ: Ловимо помилку для звичайних повідомлень
+          const resMsgData = await resMsg.json();
+          if (!resMsgData.ok) {
+              console.log("❌ ПОМИЛКА ТЕЛЕГРАМУ (ЗВИЧАЙНЕ ПОВІДОМЛЕННЯ):", JSON.stringify(resMsgData));
+          }
 
           await fetch(`https://api.telegram.org/bot${token}/copyMessage`, {
             method: 'POST',
