@@ -22,25 +22,23 @@ export default {
         const u = body.user || {};
         const userId = u.id || 'Невідомо';
 
-        const dossierText = `📋 <b>Нове замовлення реклами</b>\n\n👤 ${u.first_name || 'Анонім'} ${u.username ? `(@${u.username})` : ''}\n🆔 <code>${userId}</code>\n🌐 мова: ${u.language_code || 'uk'}\n➖➖➖➖➖➖➖➖\n${body.text}`;
+        // Надійна екранізація для HTML, щоб ніякі дивні символи в імені не ламали бота
+        const safeFirstName = (u.first_name || 'Анонім').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const safeUsername = u.username ? `(@${u.username})` : '';
 
-        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        // Профіль тепер зашитий прямо в ім'я, жодних небезпечних інлайн-кнопок
+        const dossierText = `📋 <b>Нове замовлення реклами</b>\n\n👤 <a href="tg://user?id=${userId}">${safeFirstName}</a> ${safeUsername}\n🆔 <code>${userId}</code>\n🌐 мова: ${u.language_code || 'uk'}\n➖➖➖➖➖➖➖➖\n${body.text}`;
+
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: adminGroup,
             text: dossierText,
             parse_mode: 'HTML',
-            message_thread_id: adminThreadId,
-            reply_markup: { inline_keyboard: [[{ text: "👤 Профіль", url: `tg://user?id=${userId}` }]] }
+            message_thread_id: adminThreadId
           })
         });
-        
-        // ДЕБАГ: Ловимо помилку від Телеграму для міні-апки
-        const resData = await res.json();
-        if (!resData.ok) {
-            console.log("❌ ПОМИЛКА ТЕЛЕГРАМУ (MINI-APP):", JSON.stringify(resData));
-        }
         
         if (userId !== 'Невідомо') {
           await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -93,26 +91,21 @@ export default {
       // ЗАМОВЛЕННЯ ЧЕРЕЗ КНОПКУ (WEB_APP_DATA)
       if (msg.web_app_data) {
         const u = msg.from || {};
-        const dossierText = `📋 <b>Нове замовлення реклами!</b>\n\n👤 ${u.first_name || 'Анонім'} ${u.username ? `(@${u.username})` : ''}\n🆔 <code>${u.id}</code>\n🌐 мова: ${u.language_code || 'uk'}\n➖➖➖➖➖➖➖➖\n${msg.web_app_data.data}`;
+        const safeFirstName = (u.first_name || 'Анонім').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const safeUsername = u.username ? `(@${u.username})` : '';
+
+        const dossierText = `📋 <b>Нове замовлення реклами!</b>\n\n👤 <a href="tg://user?id=${u.id}">${safeFirstName}</a> ${safeUsername}\n🆔 <code>${u.id}</code>\n🌐 мова: ${u.language_code || 'uk'}\n➖➖➖➖➖➖➖➖\n${msg.web_app_data.data}`;
         
-        const resWeb = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: adminGroup,
             text: dossierText,
             parse_mode: 'HTML',
-            message_thread_id: adminThreadId,
-            reply_markup: { inline_keyboard: [[{ text: "👤 Профіль", url: `tg://user?id=${u.id}` }]] }
+            message_thread_id: adminThreadId
           })
         });
-
-        // ДЕБАГ: Ловимо помилку від Телеграму для кнопки
-        const resWebData = await resWeb.json();
-        if (!resWebData.ok) {
-            console.log("❌ ПОМИЛКА ТЕЛЕГРАМУ (WEB_APP_DATA):", JSON.stringify(resWebData));
-        }
-
         return new Response('OK');
       }
 
@@ -128,25 +121,20 @@ export default {
             })
           });
         } else {
-          // Звичайне повідомлення - робимо досьє з кнопкою профілю
           const u = msg.from || {};
-          const resMsg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          const safeFirstName = (u.first_name || 'Анонім').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          const safeUsername = u.username ? `(@${u.username})` : '';
+
+          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: adminGroup,
               message_thread_id: adminThreadId,
-              text: `💬 <b>Повідомлення від клієнта</b>\n👤 ${u.first_name} ${u.username ? `(@${u.username})` : ''}\n🆔 <code>${u.id}</code>`,
-              parse_mode: 'HTML',
-              reply_markup: { inline_keyboard: [[{ text: "👤 Профіль", url: `tg://user?id=${u.id}` }]] }
+              text: `💬 <b>Повідомлення від клієнта</b>\n👤 <a href="tg://user?id=${u.id}">${safeFirstName}</a> ${safeUsername}\n🆔 <code>${u.id}</code>`,
+              parse_mode: 'HTML'
             })
           });
-
-          // ДЕБАГ: Ловимо помилку для звичайних повідомлень
-          const resMsgData = await resMsg.json();
-          if (!resMsgData.ok) {
-              console.log("❌ ПОМИЛКА ТЕЛЕГРАМУ (ЗВИЧАЙНЕ ПОВІДОМЛЕННЯ):", JSON.stringify(resMsgData));
-          }
 
           await fetch(`https://api.telegram.org/bot${token}/copyMessage`, {
             method: 'POST',
