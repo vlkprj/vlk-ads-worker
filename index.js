@@ -17,19 +17,18 @@ export default {
     if (request.method === 'POST') {
       const url = new URL(request.url);
 
+      // === ЗАМОВЛЕННЯ З САЙТУ (/order) ===
       if (url.pathname === '/order') {
         const body = await request.json();
         const u = body.user || {};
         const userId = u.id || 'Невідомо';
 
-        // Надійна екранізація для HTML, щоб ніякі дивні символи в імені не ламали бота
         const safeFirstName = (u.first_name || 'Анонім').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const safeUsername = u.username ? `(@${u.username})` : '';
 
-        // Профіль тепер зашитий прямо в ім'я, жодних небезпечних інлайн-кнопок
         const dossierText = `📋 <b>Нове замовлення реклами</b>\n\n👤 <a href="tg://user?id=${userId}">${safeFirstName}</a> ${safeUsername}\n🆔 <code>${userId}</code>\n🌐 мова: ${u.language_code || 'uk'}\n➖➖➖➖➖➖➖➖\n${body.text}`;
 
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -39,6 +38,12 @@ export default {
             message_thread_id: adminThreadId
           })
         });
+        
+        const data = await res.json();
+        // Зберігаємо в базу (на 30 днів)
+        if (data.ok && userId !== 'Невідомо') {
+          await env.REKLAMA_KV.put(`msg:${data.result.message_id}`, userId.toString(), { expirationTtl: 2592000 });
+        }
         
         if (userId !== 'Невідомо') {
           await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -56,13 +61,14 @@ export default {
       const msg = update.message;
       const chatId = msg.chat.id.toString();
 
-      // ВІДПОВІДЬ АДМІНА (РЕПЛАЙ)
+      // === ВІДПОВІДЬ АДМІНА (РЕПЛАЙ) ===
       if (chatId === adminGroup && msg.reply_to_message && msg.message_thread_id === adminThreadId) {
-        const originalText = msg.reply_to_message.text || msg.reply_to_message.caption || '';
-        const match = originalText.match(/🆔\s*(\d+)/); 
+        const repliedMsgId = msg.reply_to_message.message_id;
         
-        if (match && match[1]) {
-          const targetUserId = match[1];
+        // Шукаємо в базі, чиє це повідомлення
+        const targetUserId = await env.REKLAMA_KV.get(`msg:${repliedMsgId}`);
+        
+        if (targetUserId) {
           const prefix = `📩 <b>Відповідь від адмінів:</b>\n\n`;
           
           if (msg.text) {
@@ -84,11 +90,22 @@ export default {
               })
             });
           }
+        } else {
+          // Якщо ти репнув на щось дуже старе або ліве, бот все одно скаже
+          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              chat_id: adminGroup, 
+              message_thread_id: adminThreadId,
+              text: "⚠️ ВІДПОВІДЬ НЕ ДОСТАВЛЕНА! Цього повідомлення вже немає в базі або це глюк." 
+            })
+          });
         }
         return new Response('OK');
       }
 
-      // ЗАМОВЛЕННЯ ЧЕРЕЗ КНОПКУ (WEB_APP_DATA)
+      // === ЗАМОВЛЕННЯ ЧЕРЕЗ КНОПКУ (WEB_APP_DATA) ===
       if (msg.web_app_data) {
         const u = msg.from || {};
         const safeFirstName = (u.first_name || 'Анонім').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -96,7 +113,7 @@ export default {
 
         const dossierText = `📋 <b>Нове замовлення реклами!</b>\n\n👤 <a href="tg://user?id=${u.id}">${safeFirstName}</a> ${safeUsername}\n🆔 <code>${u.id}</code>\n🌐 мова: ${u.language_code || 'uk'}\n➖➖➖➖➖➖➖➖\n${msg.web_app_data.data}`;
         
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -106,11 +123,16 @@ export default {
             message_thread_id: adminThreadId
           })
         });
+
+        const data = await res.json();
+        if (data.ok) {
+          await env.REKLAMA_KV.put(`msg:${data.result.message_id}`, u.id.toString(), { expirationTtl: 2592000 });
+        }
         return new Response('OK');
       }
 
-      // СТАРТ ТА ЗВИЧАЙНІ ПОВІДОМЛЕННЯ
-      if (chatId > 0) {
+      // === СТАРТ ТА ЗВИЧАЙНІ ПОВІДОМЛЕННЯ ВІД КЛІЄНТА ===
+      if (chatId > 0 && chatId !== adminGroup) {
         if (msg.text === '/start') {
           await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
@@ -125,7 +147,8 @@ export default {
           const safeFirstName = (u.first_name || 'Анонім').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
           const safeUsername = u.username ? `(@${u.username})` : '';
 
-          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          // 1. Відправляємо досьє
+          const res1 = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -135,8 +158,11 @@ export default {
               parse_mode: 'HTML'
             })
           });
+          const data1 = await res1.json();
+          if (data1.ok) await env.REKLAMA_KV.put(`msg:${data1.result.message_id}`, u.id.toString(), { expirationTtl: 2592000 });
 
-          await fetch(`https://api.telegram.org/bot${token}/copyMessage`, {
+          // 2. Копіюємо текст/файл клієнта
+          const res2 = await fetch(`https://api.telegram.org/bot${token}/copyMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -146,6 +172,8 @@ export default {
               message_thread_id: adminThreadId
             })
           });
+          const data2 = await res2.json();
+          if (data2.ok) await env.REKLAMA_KV.put(`msg:${data2.result.message_id}`, u.id.toString(), { expirationTtl: 2592000 });
         }
       }
       return new Response('OK');
