@@ -1,3 +1,7 @@
 name = "vlk-ads-worker"
 main = "index.js"
 compatibility_date = "2024-04-11"
+[[kv_namespaces]]
+binding = "REKLAMA_KV"
+id = "b7279b8b27bf4698b9da1e005770e572"
+
